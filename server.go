@@ -46,8 +46,8 @@ type (
 	}
 
 	robotsJSON struct {
-		ID       int    `json:"id"`
-		Position [2]int `json:"position"`
+		ID       int        `json:"id"`
+		Position [2]float64 `json:"position"`
 	}
 
 	robotsArrayJSON struct {
@@ -64,9 +64,9 @@ type (
 	}
 
 	regularContactJSON struct {
-		ID       int    `json:"id"`
-		Position [2]int `json:"position"`
-		Image    string `json:"image"`
+		ID       int        `json:"id"`
+		Position [2]float64 `json:"position"`
+		Image    string     `json:"image"`
 	}
 
 	searchRangeJSON struct {
@@ -83,7 +83,7 @@ var (
 	sess      = conn.NewSession(nil)
 )
 
-var robotLocations map[int][2]int
+var robotLocations map[int][2]float64
 var robotIDs []int
 var lostProperties map[int]string
 var connctedRobotNum int
@@ -202,9 +202,9 @@ func postRegularContact(c echo.Context) error {
 	}
 	robotLocations[rc.ID] = rc.Position
 	id, _ := strconv.Atoi(c.QueryParam("id"))
-	posX, _ := strconv.Atoi(c.QueryParam("posX"))
-	posY, _ := strconv.Atoi(c.QueryParam("posY"))
-	var xy [2]int
+	posX, _ := strconv.ParseFloat(c.QueryParam("posX"), 32)
+	posY, _ := strconv.ParseFloat(c.QueryParam("posY"), 32)
+	var xy [2]float64
 	xy[0] = posX
 	xy[1] = posY
 	robotLocations[id] = xy
@@ -307,7 +307,7 @@ func postFirstContact(c echo.Context) error {
 func main() {
 	e := echo.New()
 
-	robotLocations = make(map[int][2]int)
+	robotLocations = make(map[int][2]float64)
 	lostProperties = make(map[int]string)
 	connctedRobotNum = 0
 	currentID = 0
