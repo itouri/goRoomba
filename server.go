@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 	//"fmt"
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
@@ -40,7 +41,7 @@ type (
 	}
 
 	positionStr struct {
-		PosY int `json:"posY"`
+		PosX int `json:"posX"`
 		PosY int `json:"posY"`
 	}
 
@@ -83,9 +84,11 @@ var (
 )
 
 var robotLocations map[int][2]int
+var robotIDs []int
 var lostProperties map[int]string
 var connctedRobotNum int
 var currentID int
+var posAry []string
 
 //----------
 // Handlers
@@ -198,16 +201,62 @@ func postRegularContact(c echo.Context) error {
 		return err
 	}
 	robotLocations[rc.ID] = rc.Position
+	id, _ := strconv.Atoi(c.QueryParam("id"))
+	posX, _ := strconv.Atoi(c.QueryParam("posX"))
+	posY, _ := strconv.Atoi(c.QueryParam("posY"))
+	var xy [2]int
+	xy[0] = posX
+	xy[1] = posY
+	robotLocations[id] = xy
+	// var index int
+	// for i, v := range robotIDs {
+	// 	if v == id {
+	// 		index = i
+	// 	}
+	// }
+	// startY, _ := strconv.Atoi(posAry[index-1])
+	// endY, _ := strconv.Atoi(posAry[index])
 	response := searchRangeJSON{
-		ID:     -1,
-		StartY: 10,
-		EndY:   10,
+		ID:     id,
+		StartY: 1,
+		EndY:   1,
 	}
-	if false {
-		return c.JSON(http.StatusOK, response)
-	} else {
-		return c.NoContent(http.StatusNoContent)
+
+	// 画像の受け取り
+	photo, _ := c.FormFile("photo")
+	src, _ := photo.Open()
+	img, _, _ := image.Decode(src)
+
+	file, err := os.Create("recv.jpg")
+	if err != nil {
+		panic(err)
 	}
+	defer file.Close()
+
+	//file.Write(img)
+	t := time.Now()
+	timeStamp := strconv.Itoa(t.Hour()) + ":" + strconv.Itoa(t.Minute()) + ":" + strconv.Itoa(t.Second()) + "_"
+	idStr := c.QueryParam("id")
+	posStr := c.QueryParam("posX") + "_" + c.QueryParam("posY")
+	tail := 0
+	pathName := "./image/" + timeStamp + idStr + posStr
+	createPathName := pathName
+
+	_, err = os.Stat(pathName)
+	if err == nil {
+		for {
+			createPathName = pathName + "_" + strconv.Itoa(tail)
+			_, err := os.Stat(createPathName + ".jpg")
+			if err == nil {
+				break
+			}
+		}
+	}
+	outFile, _ := os.Create(createPathName + ".jpg")
+	option := &jpeg.Options{Quality: 100}
+	jpeg.Encode(outFile, img, option)
+
+	return c.JSON(http.StatusOK, response)
 }
 
 func postFirstContact(c echo.Context) error {
@@ -217,25 +266,41 @@ func postFirstContact(c echo.Context) error {
 	if err := c.Bind(rc); err != nil {
 		return err
 	}
+	robotIDs = append(robotIDs, currentID)
 	robotLocations[rc.ID] = rc.Position
-	res := []searchRangeJSON{}
+	// res := []searchRangeJSON{}
 	out, err := exec.Command("./separete", "Image_0259ce6.bmp", strconv.Itoa(connctedRobotNum)).Output()
 	if err != nil {
 		return err
 	}
 	outStr := string(out[:])
-	posAry := strings.Split(outStr, ",")
+	posAry = strings.Split(outStr, ",")
 	startY := 0
-	for _, posY := range posAry {
-		endY, _ := strconv.Atoi(posY)
-		addRes := searchRangeJSON{
-			ID:     currentID,
-			StartY: startY,
-			EndY:   endY,
-		}
-		startY = endY + 1
-		res = append(res, addRes)
+	endY := 0
+	// id := robotIDs[currentID]
+	// たった今追加したんだから格納場所は最後のはず
+	if connctedRobotNum == 1 {
+		startY = 0
+		endY, _ = strconv.Atoi(posAry[0])
+	} else {
+		startY, _ = strconv.Atoi(posAry[len(posAry)-2])
+		endY, _ = strconv.Atoi(posAry[len(posAry)-1])
 	}
+	res := searchRangeJSON{
+		ID:     currentID,
+		StartY: startY,
+		EndY:   endY,
+	}
+	// for _, posY := range posAry {
+	// 	endY, _ := strconv.Atoi(posY)
+	// 	addRes := searchRangeJSON{
+	// 		ID:     currentID,
+	// 		StartY: startY,
+	// 		EndY:   endY,
+	// 	}
+	// 	startY = endY + 1
+	// 	res = append(res, addRes)
+	// }
 	return c.JSON(http.StatusOK, res)
 }
 
@@ -260,14 +325,17 @@ func main() {
 	e.DELETE("/users/:id", deleteUser)
 
 	// for Administrator
-	e.GET("/robots/", getRobots)
-	e.GET("/lost-properties/", getLostProperties)
+	e.GET("/api/robots", getRobots)
+	e.GET("/api/lost-properties", getLostProperties)
 
 	// from Roomba
-	e.POST("/regular-contact/", postRegularContact)
-	e.GET("/first-contact/", postFirstContact)
+	e.POST("/api/regular-contact", postRegularContact)
+	e.GET("/api/first-contact", postFirstContact)
 
 	e.POST("/", putAny)
+	e.Static("/index", "./static/index.html")
+	e.Static("/js/app.js", "./static/js/app.js")
+	e.Static("/obj", "./static/obj")
 
 	// Start server
 	//e.Run(standard.New(":1323"))
