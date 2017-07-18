@@ -87,6 +87,10 @@ unsigned char* divide(unsigned char* pixel, int width, int height, int divide)
 
 unsigned char* divide2(unsigned char* pixel, int width, int height, int divide)
 {
+    if (divide == 1) {
+        printf("%d", height);
+        return pixel;
+    }
   width /= 8;
   int w,h,count;
   // すべての黒面積を計算
@@ -98,6 +102,7 @@ unsigned char* divide2(unsigned char* pixel, int width, int height, int divide)
   }
 
   int i = 0;
+    int divideCount = 0;
   blackPixel /= divide;
 
   for (h=0; h < height; h++) {
@@ -105,7 +110,13 @@ unsigned char* divide2(unsigned char* pixel, int width, int height, int divide)
       count += blackBitsNum(pixel[h * width + w]); 
     }
     if ( count > blackPixel ) {
-      printf("line = %d\n", h);
+        divideCount++;
+        if (divideCount == divide-1) {
+            printf("%d,%d", h, height);
+        } else {
+      printf("%d,", h);
+        }
+
       // line をシマシマにする
       int k, s=0;
       for (k=0; k < width; k++) {
@@ -156,8 +167,6 @@ int main(int argc, char *argv[])
   long pixelSize = width * height;
   imgSize += pixelSize;
   
-  printf("pixelsize = %ld\n", pixelSize);
-
   unsigned char *pixel;
   // 確保しすぎじゃない?
   pixel = (unsigned char *)malloc( pixelSize / sizeof(unsigned char) );
