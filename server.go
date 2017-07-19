@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
 	//"fmt"
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
@@ -47,7 +46,7 @@ type (
 
 	robotsJSON struct {
 		ID       int        `json:"id"`
-		Position [2]float64 `json:"position"`
+		Position [2]float32 `json:"position"`
 	}
 
 	robotsArrayJSON struct {
@@ -65,7 +64,7 @@ type (
 
 	regularContactJSON struct {
 		ID       int        `json:"id"`
-		Position [2]float64 `json:"position"`
+		Position [2]float32 `json:"position"`
 		Image    string     `json:"image"`
 	}
 
@@ -73,6 +72,11 @@ type (
 		ID     int `json:"id"`
 		StartY int `json:"startY"`
 		EndY   int `json:"endY"`
+	}
+
+	testJSON struct {
+		Test1 string `json:test1`
+		Test2 string `json:test2`
 	}
 )
 
@@ -83,7 +87,7 @@ var (
 	sess      = conn.NewSession(nil)
 )
 
-var robotLocations map[int][2]float64
+var robotLocations map[int][2]float32
 var robotIDs []int
 var lostProperties map[int]string
 var connctedRobotNum int
@@ -200,13 +204,14 @@ func postRegularContact(c echo.Context) error {
 	if err := c.Bind(rc); err != nil {
 		return err
 	}
-	robotLocations[rc.ID] = rc.Position
 	id, _ := strconv.Atoi(c.QueryParam("id"))
-	posX, _ := strconv.ParseFloat(c.QueryParam("posX"), 32)
-	posY, _ := strconv.ParseFloat(c.QueryParam("posY"), 32)
-	var xy [2]float64
-	xy[0] = posX
-	xy[1] = posY
+	pos_X, _ := strconv.ParseFloat(c.QueryParam("pos_x"), 32)
+	pos_Y, _ := strconv.ParseFloat(c.QueryParam("pos_y"), 32)
+	pos_x := float32(pos_X)
+	pos_y := float32(pos_Y)
+	var xy [2]float32
+	xy[0] = pos_x
+	xy[1] = pos_y
 	robotLocations[id] = xy
 	// var index int
 	// for i, v := range robotIDs {
@@ -216,59 +221,59 @@ func postRegularContact(c echo.Context) error {
 	// }
 	// startY, _ := strconv.Atoi(posAry[index-1])
 	// endY, _ := strconv.Atoi(posAry[index])
-	response := searchRangeJSON{
-		ID:     id,
-		StartY: 1,
-		EndY:   1,
+	// response := searchRangeJSON{
+	// 	ID:     id,
+	// 	StartY: int(posX),
+	// 	EndY:   int(posY),
+	// }
+
+	response := testJSON{
+		Test1: c.QueryParam("id"),
+		Test2: c.QueryParam("pos_y"),
 	}
 
-	// 画像の受け取り
-	photo, _ := c.FormFile("photo")
-	src, _ := photo.Open()
-	img, _, _ := image.Decode(src)
+	// // 画像の受け取り
+	// photo, _ := c.FormFile("photo")
+	// src, _ := photo.Open()
+	// img, _, _ := image.Decode(src)
 
-	file, err := os.Create("recv.jpg")
-	if err != nil {
-		panic(err)
-	}
-	defer file.Close()
+	// file, err := os.Create("recv.jpg")
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// defer file.Close()
 
-	//file.Write(img)
-	t := time.Now()
-	timeStamp := strconv.Itoa(t.Hour()) + ":" + strconv.Itoa(t.Minute()) + ":" + strconv.Itoa(t.Second()) + "_"
-	idStr := c.QueryParam("id")
-	posStr := c.QueryParam("posX") + "_" + c.QueryParam("posY")
-	tail := 0
-	pathName := "./image/" + timeStamp + idStr + posStr
-	createPathName := pathName
+	// //file.Write(img)
+	// t := time.Now()
+	// timeStamp := strconv.Itoa(t.Hour()) + ":" + strconv.Itoa(t.Minute()) + ":" + strconv.Itoa(t.Second()) + "_"
+	// idStr := c.QueryParam("id")
+	// posStr := c.QueryParam("posX") + "_" + c.QueryParam("posY")
+	// tail := 0
+	// pathName := "./image/" + timeStamp + idStr + posStr
+	// createPathName := pathName
 
-	_, err = os.Stat(pathName)
-	if err == nil {
-		for {
-			createPathName = pathName + "_" + strconv.Itoa(tail)
-			_, err := os.Stat(createPathName + ".jpg")
-			if err == nil {
-				break
-			}
-		}
-	}
-	outFile, _ := os.Create(createPathName + ".jpg")
-	option := &jpeg.Options{Quality: 100}
-	jpeg.Encode(outFile, img, option)
+	// _, err = os.Stat(pathName)
+	// if err == nil {
+	// 	for {
+	// 		createPathName = pathName + "_" + strconv.Itoa(tail)
+	// 		_, err := os.Stat(createPathName + ".jpg")
+	// 		if err == nil {
+	// 			break
+	// 		}
+	// 	}
+	// }
+	// outFile, _ := os.Create(createPathName + ".jpg")
+	// option := &jpeg.Options{Quality: 100}
+	// jpeg.Encode(outFile, img, option)
 
 	return c.JSON(http.StatusOK, response)
 }
 
-func postFirstContact(c echo.Context) error {
+func getFirstContact(c echo.Context) error {
 	currentID++
 	connctedRobotNum++
-	rc := new(regularContactJSON)
-	if err := c.Bind(rc); err != nil {
-		return err
-	}
+
 	robotIDs = append(robotIDs, currentID)
-	robotLocations[rc.ID] = rc.Position
-	// res := []searchRangeJSON{}
 	out, err := exec.Command("./separete", "Image_0259ce6.bmp", strconv.Itoa(connctedRobotNum)).Output()
 	if err != nil {
 		return err
@@ -307,7 +312,7 @@ func postFirstContact(c echo.Context) error {
 func main() {
 	e := echo.New()
 
-	robotLocations = make(map[int][2]float64)
+	robotLocations = make(map[int][2]float32)
 	lostProperties = make(map[int]string)
 	connctedRobotNum = 0
 	currentID = 0
@@ -330,7 +335,7 @@ func main() {
 
 	// from Roomba
 	e.POST("/api/regular-contact", postRegularContact)
-	e.GET("/api/first-contact", postFirstContact)
+	e.GET("/api/first-contact", getFirstContact)
 
 	e.POST("/", putAny)
 	e.Static("/index", "./static/index.html")
