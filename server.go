@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 	//"fmt"
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
@@ -232,39 +233,39 @@ func postRegularContact(c echo.Context) error {
 		Test2: c.QueryParam("pos_y"),
 	}
 
-	// // 画像の受け取り
-	// photo, _ := c.FormFile("photo")
-	// src, _ := photo.Open()
-	// img, _, _ := image.Decode(src)
+	// 画像の受け取り
+	photo, _ := c.FormFile("photo")
+	src, _ := photo.Open()
+	img, _, _ := image.Decode(src)
 
-	// file, err := os.Create("recv.jpg")
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// defer file.Close()
+	file, err := os.Create("recv.jpg")
+	if err != nil {
+		panic(err)
+	}
+	defer file.Close()
 
-	// //file.Write(img)
-	// t := time.Now()
-	// timeStamp := strconv.Itoa(t.Hour()) + ":" + strconv.Itoa(t.Minute()) + ":" + strconv.Itoa(t.Second()) + "_"
-	// idStr := c.QueryParam("id")
-	// posStr := c.QueryParam("posX") + "_" + c.QueryParam("posY")
-	// tail := 0
-	// pathName := "./image/" + timeStamp + idStr + posStr
-	// createPathName := pathName
+	//file.Write(img)
+	t := time.Now()
+	timeStamp := strconv.Itoa(t.Hour()) + ":" + strconv.Itoa(t.Minute()) + ":" + strconv.Itoa(t.Second()) + "_"
+	idStr := c.QueryParam("id")
+	posStr := c.QueryParam("posX") + "_" + c.QueryParam("posY")
+	tail := 0
+	pathName := "./image/" + timeStamp + idStr + posStr
+	createPathName := pathName
 
-	// _, err = os.Stat(pathName)
-	// if err == nil {
-	// 	for {
-	// 		createPathName = pathName + "_" + strconv.Itoa(tail)
-	// 		_, err := os.Stat(createPathName + ".jpg")
-	// 		if err == nil {
-	// 			break
-	// 		}
-	// 	}
-	// }
-	// outFile, _ := os.Create(createPathName + ".jpg")
-	// option := &jpeg.Options{Quality: 100}
-	// jpeg.Encode(outFile, img, option)
+	_, err = os.Stat(pathName)
+	if err == nil {
+		for {
+			createPathName = pathName + "_" + strconv.Itoa(tail)
+			_, err := os.Stat(createPathName + ".jpg")
+			if err == nil {
+				break
+			}
+		}
+	}
+	outFile, _ := os.Create(createPathName + ".jpg")
+	option := &jpeg.Options{Quality: 100}
+	jpeg.Encode(outFile, img, option)
 
 	return c.JSON(http.StatusOK, response)
 }
@@ -296,16 +297,6 @@ func getFirstContact(c echo.Context) error {
 		StartY: startY,
 		EndY:   endY,
 	}
-	// for _, posY := range posAry {
-	// 	endY, _ := strconv.Atoi(posY)
-	// 	addRes := searchRangeJSON{
-	// 		ID:     currentID,
-	// 		StartY: startY,
-	// 		EndY:   endY,
-	// 	}
-	// 	startY = endY + 1
-	// 	res = append(res, addRes)
-	// }
 	return c.JSON(http.StatusOK, res)
 }
 
