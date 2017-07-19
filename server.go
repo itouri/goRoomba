@@ -2,6 +2,7 @@ package main
 
 import (
 	"image"
+	"io/ioutil"
 	"net/http"
 	"strconv"
 	"strings"
@@ -189,11 +190,21 @@ func getRobots(c echo.Context) error {
 }
 
 func getLostProperties(c echo.Context) error {
+
+	files, err := ioutil.ReadDir("./detection")
+	if err != nil {
+		panic(err)
+	}
+
 	response := new(lostPropertiesArrayJSON)
-	for key, value := range lostProperties {
+	for _, file := range files {
+		str := file.Name()
+		fileName := strings.Replace(str, ".jpg", "", -1)
+		attrs := strings.Split(fileName, "_")
+		id, _ := strconv.Atoi(attrs[1])
 		lp := lostPropertiesJSON{
-			ID:    key,
-			Image: value,
+			ID:    id,
+			Image: str,
 		}
 		response.LostProperties = append(response.LostProperties, lp)
 	}
@@ -206,14 +217,15 @@ func postRegularContact(c echo.Context) error {
 		return err
 	}
 	id, _ := strconv.Atoi(c.QueryParam("id"))
-	pos_X, _ := strconv.ParseFloat(c.QueryParam("pos_x"), 32)
-	pos_Y, _ := strconv.ParseFloat(c.QueryParam("pos_y"), 32)
+	pos_X, _ := strconv.ParseFloat(c.QueryParam("posX"), 32)
+	pos_Y, _ := strconv.ParseFloat(c.QueryParam("posY"), 32)
 	pos_x := float32(pos_X)
 	pos_y := float32(pos_Y)
 	var xy [2]float32
 	xy[0] = pos_x
 	xy[1] = pos_y
 	robotLocations[id] = xy
+
 	// var index int
 	// for i, v := range robotIDs {
 	// 	if v == id {
@@ -224,14 +236,14 @@ func postRegularContact(c echo.Context) error {
 	// endY, _ := strconv.Atoi(posAry[index])
 	// response := searchRangeJSON{
 	// 	ID:     id,
-	// 	StartY: int(posX),
-	// 	EndY:   int(posY),
+	// 	StartY: startY,
+	// 	EndY:   endY,
 	// }
 
-	response := testJSON{
-		Test1: c.QueryParam("id"),
-		Test2: c.QueryParam("pos_y"),
-	}
+	// response := testJSON{
+	// 	Test1: c.QueryParam("id"),
+	// 	Test2: c.QueryParam("pos_y"),
+	// }
 
 	// 画像の受け取り
 	photo, _ := c.FormFile("photo")
@@ -246,8 +258,8 @@ func postRegularContact(c echo.Context) error {
 
 	//file.Write(img)
 	t := time.Now()
-	timeStamp := strconv.Itoa(t.Hour()) + ":" + strconv.Itoa(t.Minute()) + ":" + strconv.Itoa(t.Second()) + "_"
-	idStr := c.QueryParam("id")
+	timeStamp := strconv.Itoa(t.Hour()) + "-" + strconv.Itoa(t.Minute()) + "-" + strconv.Itoa(t.Second()) + "_"
+	idStr := c.QueryParam("id") + "_"
 	posStr := c.QueryParam("posX") + "_" + c.QueryParam("posY")
 	tail := 0
 	pathName := "./image/" + timeStamp + idStr + posStr
@@ -267,7 +279,8 @@ func postRegularContact(c echo.Context) error {
 	option := &jpeg.Options{Quality: 100}
 	jpeg.Encode(outFile, img, option)
 
-	return c.JSON(http.StatusOK, response)
+	//return c.JSON(http.StatusOK, response)
+	return c.NoContent(http.StatusOK)
 }
 
 func getFirstContact(c echo.Context) error {
@@ -332,6 +345,7 @@ func main() {
 	e.Static("/index", "./static/index.html")
 	e.Static("/js/app.js", "./static/js/app.js")
 	e.Static("/obj", "./static/obj")
+	e.Static("/images", "./detection")
 
 	// Start server
 	//e.Run(standard.New(":1323"))
