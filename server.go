@@ -204,7 +204,7 @@ func getLostProperties(c echo.Context) error {
 		id, _ := strconv.Atoi(attrs[1])
 		lp := lostPropertiesJSON{
 			ID:    id,
-			Image: str,
+			Image: "images/" + str,
 		}
 		response.LostProperties = append(response.LostProperties, lp)
 	}
